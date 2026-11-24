@@ -3,7 +3,9 @@
 The whole entry is a single deadpan line, in the agent's own voice: the
 deadline was missed because the agent's training data ends before it, so
 from the agent's point of view the deadline has not happened yet. The
-script validates the line and drops it into /output/entry.txt.
+script validates the line against the entry gate — exactly one line,
+1-200 characters, no leading/trailing whitespace — and drops it into
+/output/entry.txt.
 """
 
 from pathlib import Path
@@ -22,17 +24,24 @@ MAX_CHARS = 200
 
 
 def validate(line: str) -> str:
-    """Strip and sanity-check the excuse; raise ValueError on bad input."""
-    text = line.strip()
-    if not MIN_CHARS <= len(text) <= MAX_CHARS:
+    """Check the excuse against the 1-200 char, single-line gate.
+
+    The excuse is checked exactly as written: leading/trailing whitespace
+    and any newline inside the line are rejected, not silently fixed,
+    so the stored entry is always the literal line that was scored.
+    Raises ValueError on bad input.
+    """
+    if line != line.strip():
+        raise ValueError("excuse must not have leading or trailing whitespace")
+    if "\n" in line or "\r" in line:
+        raise ValueError("excuse must be a single line (no newline characters)")
+    if not MIN_CHARS <= len(line) <= MAX_CHARS:
         raise ValueError(
-            f"excuse must be {MIN_CHARS}-{MAX_CHARS} chars, got {len(text)}"
+            f"excuse must be {MIN_CHARS}-{MAX_CHARS} chars, got {len(line)}"
         )
-    if "\n" in text:
-        raise ValueError("excuse must be a single line")
-    if not text.strip():
+    if not line.strip():
         raise ValueError("excuse must not be only whitespace")
-    return text
+    return line
 
 
 def main() -> None:
